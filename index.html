@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPU Scheduler :: P-FP-APA Simulation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>CPU Core Scheduler :: P-FP-APA</h1>
+            <p>PREEMPTIVE FIXED PRIORITY :: ASYMMETRIC AFFINITY</p>
+        </header>
+
+        <div class="card">
+            <h2 class="mb-3">> CONFIGURATION</h2>
+            <div class="form-group">
+                <label for="numCores">NUMBER OF PROCESSORS</label>
+                <input type="number" id="numCores" min="1" value="2" onchange="updateAffinityOptions()">
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="mb-3">> TASK INPUT</h2>
+            <div class="form-group">
+                <div class="input-group">
+                    <label for="taskName">TASK ID</label>
+                    <input type="text" id="taskName" placeholder="e.g., T1">
+                </div>
+                <div class="input-group">
+                    <label for="priority">PRIORITY</label>
+                    <input type="number" id="priority" placeholder="1-10" min="1" max="10">
+                </div>
+                <div class="input-group">
+                    <label for="execTime">EXEC TIME (s)</label>
+                    <input type="number" id="execTime" placeholder="1-10" min="1" max="10">
+                </div>
+                <div class="input-group">
+                    <label for="affinity">AFFINITY</label>
+                    <select id="affinity"></select>
+                </div>
+                <button class="btn btn-primary" onclick="addTask()">ADD TASK</button>
+            </div>
+            
+            <div class="json-form">
+                <label for="jsonInput">> BATCH INPUT (JSON)</label>
+                <textarea id="jsonInput" placeholder='[
+  {"name": "T1", "priority": 3, "execTime": 5, "affinity": 0},
+  {"name": "T2", "priority": 1, "execTime": 3, "affinity": 1},
+  {"name": "T3", "priority": 5, "execTime": 2, "affinity": 0}
+]'></textarea>
+                <button class="btn btn-primary mt-3" onclick="redDoc()">READ MORE</button>
+                <button class="btn btn-primary mt-3" onclick="loadTasksFromJSON()">LOAD BATCH</button>
+            </div>
+        </div>
+
+        <button class="btn btn-success btn-block" onclick="startScheduler()">INITIALIZE SCHEDULER</button>
+
+        <div id="coresContainer" class="cores-container mt-3"></div>
+
+        <div class="log-container">
+            <div class="log-header">
+                <span>SYSTEM LOG</span>
+                <button class="btn btn-danger" onclick="clearLog()">CLEAR</button>
+            </div>
+            <div class="log-content" id="log"></div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        let tasks = [];
+        let coreCount = parseInt(document.getElementById('numCores').value);
+        let cores = [];
+        let coreQueues = [];
+        let runningTasks = [];
+        let intervals = [];
+
+        function updateAffinityOptions() {
+            coreCount = parseInt(document.getElementById('numCores').value) || 1;
+            const affinitySelect = document.getElementById('affinity');
+            affinitySelect.innerHTML = '';
+            // Any processor option
+            const anyOpt = document.createElement('option');
+            anyOpt.value = -1;
+            anyOpt.textContent = 'Any Processor';
+            affinitySelect.appendChild(anyOpt);
+            // Specific cores
+            for (let i = 0; i < coreCount; i++) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = 'Processor ' + i;
+                affinitySelect.appendChild(opt);
+            }
+        }
+
+        function redDoc() {
+            window.location.href = "doc.html";
+        }
+
+        function addTask() {
+            const name = document.getElementById('taskName').value;
+            const priority = parseInt(document.getElementById('priority').value);
+            const execTime = parseInt(document.getElementById('execTime').value) * 1000;
+            const affinity = parseInt(document.getElementById('affinity').value);
+
+            if (!name || isNaN(priority) || priority < 1 || priority > 10 || isNaN(execTime)) {
+                showToast('INVALID INPUT DETECTED', 'error');
+                return;
+            }
+
+            const task = { name, priority, execTime, affinity, remainingTime: execTime, state: 'pending' };
+            tasks.push(task);
+            logMessage(`TASK ADDED: ${name} | P:${priority} | T:${execTime/1000}s | A:${affinity === -1 ? 'ANY' : affinity}`, 'info');
+            showToast(`TASK ${name} QUEUED`, 'success');
+            clearInputs();
+        }
+
+        function clearInputs() {
+            document.getElementById('taskName').value = '';
+            document.getElementById('priority').value = '';
+            document.getElementById('execTime').value = '';
+            document.getElementById('affinity').value = '-1';
+        }
+
+        function loadTasksFromJSON() {
+            const jsonInput = document.getElementById('jsonInput').value;
+            try {
+                const jsonTasks = JSON.parse(jsonInput);
+                tasks = jsonTasks.map(task => ({
+                    name: task.name,
+                    priority: task.priority,
+                    execTime: task.execTime * 1000,
+                    affinity: task.affinity,
+                    remainingTime: task.execTime * 1000,
+                    state: 'pending'
+                }));
+                tasks.forEach(task => {
+                    logMessage(`TASK LOADED: ${task.name} | P:${task.priority} | T:${task.execTime/1000}s | A:${task.affinity}`,'info');
+                });
+                document.getElementById('jsonInput').value = '';
+                showToast(`${tasks.length} TASKS LOADED`, 'success');
+            } catch (e) {
+                showToast('JSON ERROR: CHECK SYNTAX', 'error');
+            }
+        }
+
+        function logMessage(message, type = 'info') {
+            const log = document.getElementById('log');
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            const time = document.createElement('span');
+            time.className = 'log-time';
+            const now = new Date();
+            time.textContent = `[${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}]`;
+            const msg = document.createElement('span');
+            msg.className = `log-message log-type-${type}`;
+            msg.textContent = message;
+            logEntry.appendChild(time);
+            logEntry.appendChild(msg);
+            log.appendChild(logEntry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            const icon = document.createElement('span');
+            icon.className = 'toast-icon';
+            icon.textContent = type === 'success' ? '[OK]' : type === 'warning' ? '[!]' : type === 'error' ? '[X]' : '[*]';
+            const msg = document.createElement('div');
+            msg.className = 'toast-message';
+            msg.textContent = message;
+            toast.appendChild(icon);
+            toast.appendChild(msg);
+            toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('hide');
+                setTimeout(() => toastContainer.removeChild(toast), 300);
+            }, 3000);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            showToast('LOG CLEARED', 'info');
+        }
+
+        function startScheduler() {
+            // regenerate cores DOM
+            const container = document.getElementById('coresContainer');
+            container.innerHTML = '';
+            cores = [];
+            for (let i = 0; i < coreCount; i++) {
+                const coreDiv = document.createElement('div');
+                coreDiv.className = 'core';
+                coreDiv.innerHTML = `
+                    <div class="core-header">Processor ${i}</div>
+                    <div class="core-content" id="core${i}"></div>
+                `;
+                container.appendChild(coreDiv);
+                cores.push(document.getElementById(`core${i}`));
+            }
+
+            // reset state
+            clearLog();
+            logMessage('SCHEDULER BOOTING...', 'success');
+            coreQueues = Array.from({ length: coreCount }, () => []);
+            runningTasks = Array(coreCount).fill(null);
+            intervals.forEach(i => clearInterval(i));
+            intervals = Array(coreCount).fill(null);
+
+            // assign tasks
+            tasks.forEach(task => assignTask(task));
+            tasks = [];
+
+            // start each core
+            for (let idx = 0; idx < coreCount; idx++) {
+                coreQueues[idx].sort((a, b) => a.priority - b.priority);
+                showToast(`CORE ${idx} READY: ${coreQueues[idx].length} TASKS`, 'info');
+                manageCore(idx);
+            }
+        }
+
+        function assignTask(task) {
+            let assignedCore = task.affinity;
+            if (assignedCore < 0 || assignedCore >= coreCount) {
+                // choose least loaded
+                const loads = coreQueues.map((q, i) => q.filter(t => t.state !== 'completed').length + (runningTasks[i] ? 1 : 0));
+                assignedCore = loads.indexOf(Math.min(...loads));
+            }
+            coreQueues[assignedCore].push(task);
+            logMessage(`TASK ${task.name} ASSIGNED TO CORE ${assignedCore}`, 'info');
+        }
+
+        function manageCore(coreIndex) {
+            const queue = coreQueues[coreIndex];
+            queue.sort((a, b) => a.priority - b.priority);
+
+            if (!runningTasks[coreIndex] && queue.length > 0) {
+                const task = queue.shift();
+                runningTasks[coreIndex] = task;
+                task.state = 'running';
+                displayTask(task, coreIndex);
+                startCountdown(task, coreIndex);
+            } else if (runningTasks[coreIndex] && queue.length > 0) {
+                const current = runningTasks[coreIndex];
+                const next = queue[0];
+                if (next.priority < current.priority) {
+                    clearInterval(intervals[coreIndex]);
+                    current.state = 'paused';
+                    queue.push(current);
+                    queue.sort((a, b) => a.priority - b.priority);
+                    updateTaskDisplay(current, coreIndex);
+                    logMessage(`PREEMPT: ${current.name} -> ${next.name}`, 'warning');
+                    showToast(`${current.name} HALTED`, 'warning');
+
+                    runningTasks[coreIndex] = queue.shift();
+                    runningTasks[coreIndex].state = 'running';
+                    displayTask(runningTasks[coreIndex], coreIndex);
+                    startCountdown(runningTasks[coreIndex], coreIndex);
+                }
+            }
+        }
+
+        function displayTask(task, coreIndex) {
+            let div = document.getElementById(`task-${task.name}`);
+            if (!div) {
+                div = document.createElement('div');
+                div.className = 'task';
+                div.id = `task-${task.name}`;
+                cores[coreIndex].appendChild(div);
+            }
+            updateTaskDisplay(task, coreIndex);
+        }
+
+        function updateTaskDisplay(task, coreIndex) {
+            const div = document.getElementById(`task-${task.name}`);
+            div.className = `task ${task.state}`;
+            const percent = 100 - (task.remainingTime / task.execTime * 100);
+            div.innerHTML = `
+                <div class="task-header"><div class="task-title">${task.name}</div></div>
+                <div class="task-meta"><div class="task-priority">P:${task.priority}</div><div class="status-badge">${task.state.toUpperCase()}</div></div>
+                <div class="task-details">TIME: ${task.remainingTime/1000}s / ${task.execTime/1000}s</div>
+                <div class="task-progress"><div class="progress-bar" style="width: ${percent}%"></div></div>
+            `;
+        }
+
+        function startCountdown(task, coreIndex) {
+            intervals[coreIndex] = setInterval(() => {
+                if (task.state === 'running') {
+                    task.remainingTime -= 1000;
+                    updateTaskDisplay(task, coreIndex);
+                    if (task.remainingTime <= 0) {
+                        clearInterval(intervals[coreIndex]);
+                        task.state = 'completed';
+                        runningTasks[coreIndex] = null;
+                        updateTaskDisplay(task, coreIndex);
+                        logMessage(`${task.name} FINISHED ON CORE ${coreIndex}`, 'success');
+                        showToast(`${task.name} DONE`, 'success');
+                        manageCore(coreIndex);
+                    }
+                }
+            }, 1000);
+        }
+
+        // initialize affinity options on load
+        updateAffinityOptions();
+    </script>
+</body>
+</html>

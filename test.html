@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Random Test Batch Generator</title>
+  <style>
+    :root {
+      --cpu-green: #00ff00;
+      --cpu-dark: #0a0a0a;
+      --cpu-gray: #a0a0a0;
+      --cpu-blue: #00b7eb;
+      --cpu-red: #ff4040;
+      --cpu-yellow: #ffff00;
+      --cpu-bg: #1a1a1a;
+      --border-radius: 4px;
+      --shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+      --transition: all 0.2s ease;
+      --scanline: repeating-linear-gradient(
+        0deg,
+        rgba(0, 255, 0, 0.05),
+        rgba(0, 255, 0, 0.05) 1px,
+        transparent 1px,
+        transparent 2px
+      );
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background-color: var(--cpu-bg);
+      color: var(--cpu-green);
+      line-height: 1.4;
+      padding: 15px;
+      background-image: var(--scanline);
+    }
+
+    .container { max-width: 800px; margin: 0 auto; }
+
+    header {
+      background-color: var(--cpu-dark);
+      padding: 15px;
+      border: 2px solid var(--cpu-gray);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 15px;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    h1 {
+      color: var(--cpu-blue);
+      font-size: 24px;
+      text-shadow: 0 0 5px var(--cpu-blue);
+    }
+
+    .form-group {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      min-width: 150px;
+    }
+
+    label {
+      font-size: 12px;
+      color: var(--cpu-gray);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    input {
+      padding: 8px;
+      background-color: var(--cpu-bg);
+      color: var(--cpu-green);
+      border: 1px solid var(--cpu-green);
+      border-radius: var(--border-radius);
+      transition: var(--transition);
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--cpu-yellow);
+      box-shadow: 0 0 5px var(--cpu-green);
+    }
+
+    .btn {
+      padding: 10px 16px;
+      border: 1px solid var(--cpu-green);
+      border-radius: var(--border-radius);
+      font-family: 'Courier New', monospace;
+      cursor: pointer;
+      background-color: var(--cpu-dark);
+      color: var(--cpu-green);
+      text-transform: uppercase;
+      transition: var(--transition);
+    }
+
+    .btn:hover {
+      background-color: var(--cpu-green);
+      color: var(--cpu-dark);
+      box-shadow: 0 0 5px var(--cpu-green);
+    }
+
+    textarea {
+      width: 100%;
+      margin-top: 20px;
+      background-color: var(--cpu-dark);
+      color: var(--cpu-green);
+      border: 1px solid var(--cpu-gray);
+      padding: 15px;
+      border-radius: var(--border-radius);
+      font-family: 'Courier New', monospace;
+      resize: vertical;
+      min-height: 250px;
+      background-image: var(--scanline);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Random Test Batch Generator</h1>
+    </header>
+
+    <div class="form-group">
+      <div class="input-group">
+        <label for="processes">NUMBER OF PROCESSORS</label>
+        <input type="number" id="processes" min="1" value="2">
+      </div>
+      <div class="input-group">
+        <label for="tasks">NUMBER OF TASKS</label>
+        <input type="number" id="tasks" min="1" value="10">
+      </div>
+      <div class="input-group">
+        <label>&nbsp;</label>
+        <button class="btn" onclick="generateBatch()">Generate Batch</button>
+      </div>
+    </div>
+
+    <textarea id="output" readonly placeholder="Generated JSON will appear here..."></textarea>
+    <button class="btn" style="margin-top:10px;" onclick="copyJSON()">Copy JSON</button>
+  </div>
+
+  <script>
+    function getRandomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function generateBatch() {
+      const proc = parseInt(document.getElementById('processes').value);
+      const count = parseInt(document.getElementById('tasks').value);
+      const out = [];
+
+      for (let i = 0; i < count; i++) {
+        const affinity = getRandomInt(-1, proc - 1);
+        out.push({
+          name: `T${i + 1}`,
+          priority: getRandomInt(1, 10),
+          execTime: getRandomInt(1, 10),
+          affinity: affinity
+        });
+      }
+
+      document.getElementById('output').value = JSON.stringify(out, null, 2);
+    }
+
+    function copyJSON() {
+      const txt = document.getElementById('output').value;
+      navigator.clipboard.writeText(txt)
+        .then(() => alert('JSON copied!'))
+        .catch(() => alert('Copy failed'));
+    }
+  </script>
+</body>
+</html>

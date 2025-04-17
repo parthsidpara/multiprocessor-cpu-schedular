@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPU Scheduler Documentation :: P-FP-APA Simulation</title>
+    <style>
+        :root {
+            --cpu-green: #00ff00;
+            --cpu-dark: #0a0a0a;
+            --cpu-gray: #a0a0a0;
+            --cpu-blue: #00b7eb;
+            --cpu-red: #ff4040;
+            --cpu-yellow: #ffff00;
+            --cpu-bg: #1a1a1a;
+            --border-radius: 4px;
+            --shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+            --transition: all 0.2s ease;
+            --scanline: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 0, 0.05),
+                rgba(0, 255, 0, 0.05) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: var(--cpu-bg);
+            color: var(--cpu-green);
+            line-height: 1.4;
+            padding: 15px;
+            background-image: var(--scanline);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            background-color: var(--cpu-dark);
+            padding: 15px;
+            border: 2px solid var(--cpu-gray);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 15px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        h1 {
+            color: var(--cpu-blue);
+            font-size: 24px;
+            text-shadow: 0 0 5px var(--cpu-blue);
+        }
+
+        .card {
+            background-color: var(--cpu-dark);
+            border: 1px solid var(--cpu-gray);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .section {
+            margin-bottom: 10px;
+        }
+
+        .section-header {
+            background-color: var(--cpu-blue);
+            color: var(--cpu-dark);
+            padding: 10px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 16px;
+            text-transform: uppercase;
+            transition: var(--transition);
+        }
+
+        .section-header:hover {
+            background-color: var(--cpu-green);
+            color: var(--cpu-dark);
+        }
+
+        .section-content {
+            padding: 10px;
+            display: none;
+            background-image: var(--scanline);
+            border: 1px dashed var(--cpu-gray);
+            border-top: none;
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
+        }
+
+        .section-content.active {
+            display: block;
+        }
+
+        p {
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 20px;
+        }
+
+        li:before {
+            content: ">>";
+            color: var(--cpu-yellow);
+            margin-right: 5px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: 1px solid var(--cpu-green);
+            border-radius: var(--border-radius);
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            transition: var(--transition);
+            background-color: var(--cpu-dark);
+            color: var(--cpu-green);
+            text-transform: uppercase;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            background-color: var(--cpu-green);
+            color: var(--cpu-dark);
+            box-shadow: 0 0 5px var(--cpu-green);
+        }
+
+        .highlight {
+            color: var(--cpu-yellow);
+        }
+
+        .note {
+            color: var(--cpu-red);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>CPU SCHEDULER DOCUMENTATION</h1>
+            <p>P-FP-APA SIMULATION :: SOFT REAL-TIME SYSTEMS</p>
+        </header>
+
+        <div class="card">
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)">1. SYSTEM OVERVIEW</div>
+                <div class="section-content">
+                    <p>> THIS DOCUMENTATION EXPLAINS THE "P-FP-APA SCHEDULER SIMULATION" BUILT TO VISUALIZE THE PARTITIONED FIXED PRIORITY WITH ARBITRARY PROCESSOR AFFINITY (P-FP-APA) SCHEDULER FROM THE RESEARCH PAPER <span class="highlight">"CRITICAL SCHEDULING FOR SOFT REAL-TIME OPERATING SYSTEMS"</span> BY JAYNA K. DONGA.</p>
+                    <p>> PURPOSE: DEMONSTRATE TASK SCHEDULING IN A DUAL-CORE SYSTEM WITH NO MIGRATION, REFLECTING THE RESEARCH'S FOCUS ON MULTIPROCESSOR SOFT REAL-TIME SYSTEMS.</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)">2. RESEARCH FOUNDATION</div>
+                <div class="section-content">
+                    <p>> BASED ON THE P-FP-APA SCHEDULER (SYNOPSIS SECTION 5.1, PAGE 13):</p>
+                    <ul>
+                        <li>PARTITIONED APPROACH: TASKS ARE FIXED TO CORES WITH NO MIGRATION (SECTION 2.1.2.ii, PAGE 6).</li>
+                        <li>FIXED PRIORITY: STATIC PRIORITIES (1-10) DETERMINE EXECUTION ORDER (SECTION 4, PAGE 12).</li>
+                        <li>PROCESSOR AFFINITY: SUPPORTS CORE 0, CORE 1, OR NO AFFINITY (SECTION 6.1, PAGE 14).</li>
+                    </ul>
+                    <p>> CONTEXT: ALIGNS WITH SOFT REAL-TIME GOALS OF BOUNDED TARDINESS (SECTION 1, PAGE 3) AND SERVES AS A BASELINE FOR PRAMS COMPARISON (SECTION 6.4, PAGE 20).</p>
+                    <p class="note">> NOTE: SIMPLIFIED TO 2 CORES VS. RESEARCH'S VARIABLE M (2, 4, 8, 12, 16).</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)">3. SIMULATION DESIGN</div>
+                <div class="section-content">
+                    <p>> IMPLEMENTED IN HTML/CSS/JS WITH A RETRO CPU THEME:</p>
+                    <ul>
+                        <li>TASK INPUT: ADD TASKS (NAME, PRIORITY, TIME, AFFINITY) OR LOAD JSON (SECTION 6.4.1, TABLE 6.1).</li>
+                        <li>DUAL-CORE DISPLAY: CORE 0 AND CORE 1 SHOW TASK EXECUTION.</li>
+                        <li>LOGIC: JS MANAGES QUEUES, PRIORITY SORTING, AND PREEMPTION WITH NO MIGRATION.</li>
+                        <li>LOG/TOASTS: REAL-TIME EVENT TRACKING (E.G., PREEMPTION, COMPLETION).</li>
+                    </ul>
+                    <p>> REFLECTS RESEARCH BY SIMULATING STATIC AFFINITY AND FIXED-PRIORITY SCHEDULING.</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)">4. RESEARCH OBJECTIVES LINK</div>
+                <div class="section-content">
+                    <p>> SUPPORTS RESEARCH GOALS (SECTION 4, PAGE 12):</p>
+                    <ul>
+                        <li>AFFINITY: VISUALIZES STATIC CORE ASSIGNMENT.</li>
+                        <li>SCHEDULABILITY: SHOWS TASK EXECUTION ORDER AND PREEMPTION.</li>
+                        <li>CONTEXT SWITCHES: LOGS PREEMPTION EVENTS.</li>
+                        <li>CPU UTILIZATION: DUAL-CORE LOAD DISTRIBUTION.</li>
+                    </ul>
+                    <p>> BASELINE FOR PRAMS' ADVANCED FEATURES (JLDP, FLEXIBLE MIGRATION).</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)">5. USAGE GUIDE</div>
+                <div class="section-content">
+                    <p>> STEPS TO RUN:</p>
+                    <ul>
+                        <li>OPEN HTML FILE IN BROWSER.</li>
+                        <li>INPUT TASKS: ENTER DETAILS OR USE JSON (E.G., [{"name": "T1", "priority": 3, "execTime": 5, "affinity": 0}]).</li>
+                        <li>START: CLICK "INITIALIZE SCHEDULER".</li>
+                        <li>OBSERVE: WATCH CORES, LOGS, AND TOASTS.</li>
+                    </ul>
+                    <button class="btn" onclick="goSim()">RUN SIMULATION</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)">6. LIMITATIONS & FUTURE</div>
+                <div class="section-content">
+                    <p>> LIMITATIONS:</p>
+                    <ul>
+                        <li>FIXED 2 CORES VS. RESEARCH'S VARIABLE M (SECTION 6.4.3, PAGE 25).</li>
+                        <li>NO QUANTITATIVE METRICS (E.G., TABLE 6.2, PAGE 22).</li>
+                        <li>OMITS JLDP AND FLEXIBLE MIGRATION OF PRAMS.</li>
+                    </ul>
+                    <p>> FUTURE ENHANCEMENTS:</p>
+                    <ul>
+                        <li>ADD PRAMS WITH DYNAMIC PRIORITY.</li>
+                        <li>INCLUDE METRICS LIKE DEADLINE MISS RATIO.</li>
+                        <li>SUPPORT MORE CORES.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)">7. CONCLUSION</div>
+                <div class="section-content">
+                    <p>> THIS SIMULATION VISUALIZES P-FP-APA FROM THE RESEARCH, OFFERING AN INTERACTIVE WAY TO UNDERSTAND PARTITIONED SCHEDULING IN SOFT REAL-TIME SYSTEMS.</p>
+                    <p>> REFER TO SYNOPSIS SECTIONS 5.1, 6.1, AND 6.4 FOR FULL DETAILS.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleSection(header) {
+            const content = header.nextElementSibling;
+            content.classList.toggle('active');
+        }
+
+        function goSim(){
+            window.location.href = "index.html";
+        }
+
+        document.querySelector('.section-header').click();
+    </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+[
+    {"name": "T1", "priority": 3, "execTime": 5, "affinity": 0},
+    {"name": "T2", "priority": 1, "execTime": 3, "affinity": 1},
+    {"name": "T3", "priority": 5, "execTime": 4, "affinity": -1},
+    {"name": "T4", "priority": 2, "execTime": 6, "affinity": 0},
+    {"name": "T5", "priority": 4, "execTime": 2, "affinity": 1},
+    {"name": "T6", "priority": 7, "execTime": 3, "affinity": -1},
+    {"name": "T7", "priority": 6, "execTime": 5, "affinity": 0},
+    {"name": "T8", "priority": 2, "execTime": 4, "affinity": 1},
+    {"name": "T9", "priority": 8, "execTime": 2, "affinity": -1},
+    {"name": "T10", "priority": 4, "execTime": 3, "affinity": -1}
+]
